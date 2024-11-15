@@ -1,0 +1,102 @@
+---
+title: "p8105_hw5_qc2337"
+date: "2024-11-01"
+output: github_document
+---
+Load all the package needed for this hw
+```{r}
+library(tidyverse)
+library(rvest)
+library(broom)
+set.seed(1)
+
+```
+
+
+## Problem 2
+
+```{r}
+n = 30
+sigma = 5
+mu = 0:6
+alpha = 0.05
+simulations = 5000
+```
+
+
+```{r}
+simulate_t_test = function(mu, sigma = 5, n = 30) {
+  x = rnorm(n, mean = mu, sd = sigma)
+  test_result = t.test(x, mu = 0)
+  tidy(test_result)
+}
+
+results = tibble(mu = rep(mu, each = simulations)) |> 
+  mutate(
+    sim_data = map(mu, ~simulate_t_test(.x)),
+    estimate = map_dbl(sim_data, ~.x$estimate),
+    p_value = map_dbl(sim_data, ~.x$p.value),
+    reject_null = as.numeric(p_value < alpha)
+  )
+
+power_proportion = results |> 
+  group_by(mu) |> 
+  summarise(
+    proportion_rejected = mean(reject_null),
+    .groups = 'drop'
+  )
+
+power_proportion |> 
+  ggplot(aes(x = mu, y = proportion_rejected)) +
+    geom_line() +  
+    geom_point() + 
+    labs(
+      title = "Test Power vs. True Value of Mu",
+      x = "True value of mu (Effect Size)",
+      y = "Power of the Test (Proportion of Null Rejected)"
+  ) +
+  theme_minimal()
+```
+
+Describe the association between effect size and power:
+As the effect size increases, the power of the test also increases. 
+Initially, there are rapid gains in power with small increases in effect size, followed by more gradual improvements until the power effectively reaches its maximum capacity.
+
+
+plot showing the average estimate of 𝜇̂ on the y axis and the true value of 𝜇on the x axis
+```{r}
+average_estimates = results |> 
+  group_by(mu) |> 
+  summarise(
+    avg_estimate_all = mean(estimate),
+    avg_estimate_rejected = mean(estimate[reject_null == 1]),
+    .groups = 'drop'
+  )
+
+average_estimates |> 
+ggplot(aes(x = mu)) +
+  geom_line(aes(y = avg_estimate_all, color = "All Samples")) +
+  geom_line(aes(y = avg_estimate_rejected, color = "Null Rejected"))+
+  geom_point(aes(y = avg_estimate_all, color = "All Samples")) +
+  geom_point(aes(y = avg_estimate_rejected, color = "Null Rejected")) +
+  labs(
+       title = "Average estimates of mu vs. True value of mu",
+       x = "True Value of Mu",
+       y = "Average Estimate of Mu",
+       color = "Group"
+       ) +
+  theme_minimal()
+```
+
+In the sample average of 𝜇̂across tests for which the null is rejected is not  approximately equal to the true value of mu, it would overestimate the mu when having smaller effect sizes.This indicates a systematic bias where estimates from samples leading to null rejection are higher, likely due to the effect of random sampling variability where more extreme values are more likely to be observed and lead to rejection.When the effect size is large enough, the sample estimates are naturally closer to the true values.
+
+
+## Problem 3
+
+
+
+
+
+
+
+
