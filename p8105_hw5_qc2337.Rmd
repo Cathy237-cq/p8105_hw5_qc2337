@@ -8,6 +8,7 @@ Load all the package needed for this hw
 library(tidyverse)
 library(rvest)
 library(broom)
+library(knitr)
 set.seed(1)
 
 ```
@@ -93,8 +94,86 @@ In the sample average of 𝜇̂across tests for which the null is rejected is no
 
 ## Problem 3
 
+import data
+```{r}
+ homicide_df =  
+   read_csv("data/homicide_data.csv", na = c("NA",".","")) |> 
+   janitor::clean_names()
+```
+
+Describe the raw data: The "homicide_df" have 52179 observations and 12 variables.The main variables include uid, reported_date, victim_last, victim_first, victim_race, victim_age, etc.
 
 
+make a new variable
+```{r}
+homicide_summary= 
+  homicide_df |> 
+  mutate(
+    city_state = paste(city, state, sep = ", ")
+    ) |> 
+  group_by(city_state) |> 
+  summarise(
+    total_homicides = n(),
+    unsolved_homicides = sum(disposition %in% c("Closed without arrest", "Open/No arrest"), na.rm = TRUE),
+    .groups = 'drop'
+    )|> 
+  filter(unsolved_homicides > 0)
+  
+kable(city_summary)
+```
+The table shows the total homicides in each city_state and total unsolved homicides in 50 large U.S. cities.
+
+
+use the prop.test for the city of Baltimore, MD
+```{r}
+baltimore_data = 
+  homicide_summary |> 
+  filter(city_state == "Baltimore, MD")
+
+unsolved = pull(baltimore_data, unsolved_homicides)
+total = pull(baltimore_data, total_homicides)
+
+prop_test_baltimore = prop.test(unsolved, total)|>
+  broom::tidy()|>
+  knitr::kable()
+prop_test_baltimore
+```
+
+run prop.test for each of the cities
+```{r}
+unsolved_estimate_prop = function(unsolved, total) {
+  test_result = prop.test(unsolved, total, correct = FALSE)
+  broom::tidy(test_result) |> 
+    select(estimate, conf.low, conf.high)
+}
+
+
+city_tests =
+  homicide_summary |> 
+  filter(total_homicides > 0) |> 
+ mutate(
+    prop_test_result = map2(unsolved_homicides, total_homicides, unsolved_estimate_prop)
+  ) |>
+  unnest(prop_test_result)
+
+kable(city_tests)
+```
+
+Create a plot 
+```{r}
+city_tests |> 
+ggplot(aes(x = reorder(city_state, estimate), y = estimate)) +
+  geom_point(stat = "identity") + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  coord_flip() +
+  labs(
+    title = "Proportion of Unsolved Homicides by City",
+    x = "City",
+    y = "Proportion of Unsolved Homicides",
+    caption = "Error bars represent 95% confidence intervals"
+  ) +
+  theme_minimal() 
+```
 
 
 
