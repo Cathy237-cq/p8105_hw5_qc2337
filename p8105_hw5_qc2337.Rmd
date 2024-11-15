@@ -1,8 +1,8 @@
 ---
 title: "p8105_hw5_qc2337"
-date: "2024-11-01"
 output: github_document
 ---
+
 Load all the package needed for this hw
 ```{r}
 library(tidyverse)
@@ -160,7 +160,7 @@ homicide_summary=
     )|> 
   filter(unsolved_homicides > 0)
   
-kable(city_summary)
+kable(homicide_summary)
 ```
 The table shows the total homicides in each city_state and total unsolved homicides in 50 large U.S. cities.
 
